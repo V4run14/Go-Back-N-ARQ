@@ -57,21 +57,21 @@ class Server:
         packet = Packet(payload=b'')
         packet.unpack(packet_data)
 
+        # Check if no payload is there
+        # Implies it is the last packet
+        if len(packet.payload) <= 0:
+            print("File transmission complete")
+            raise KeyboardInterrupt
+        
         # Introducing random drops
         if r <= self.probabilistic_failure:
-            print(f'Dropping packet - {packet.seq_num}')
+            print(f'Packet loss, sequence number = {packet.seq_num}')
             return
         
         # Check for checksum 
         if not packet.verify_checksum():
             print(f"Corrupted packet received with seq num: {packet.seq_num}")
             return None
-        
-        # Check if no payload is there
-        # Implies it is the last packet
-        if len(packet.payload) <= 0:
-            print("File transmission complete")
-            raise KeyboardInterrupt
         print(f"Received packet with seq num: {packet.seq_num}")
         self.handle_buffer(packet)
         # Send an ACK back to the client

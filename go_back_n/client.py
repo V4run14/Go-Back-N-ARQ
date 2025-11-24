@@ -132,7 +132,7 @@ class Client:
 
     def handle_timeout(self, client_socket):
         '''Handle timeout event by resending packets from last ACKed byte.'''
-        print("Timeout occurred, resending packets from last ACKed byte.")
+        print(f"Timeout, sequence number = {self.last_ack_byte}")
         self.max_timeouts = self.max_timeouts - 1
         if self.max_timeouts <= 0:
             raise Exception("Maximum Retry Attempts reached. Terminating file sending attempt")

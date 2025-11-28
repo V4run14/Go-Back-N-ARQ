@@ -2,82 +2,65 @@
 import socket
 import sys
 import random
-from packet import Packet
+from packet import Packet, DATA_TYPE
 
 
 class Server:
     '''A simple Go-Back-N ARQ server implementation.'''
-    def __init__(self, address, port, rcwnd=1, mss=4,
-                 window_size=1, output_file='output.txt', p=0):
+
+    def __init__(self, address, port, mss=500, output_file='output.txt', p=0.0):
         self.address = address
         self.port = port
-        self.rcwnd = rcwnd
-        # Not using window_size here because server only sends ACKs,
-        # so there will be no need for reliability here
-        self.window_size = window_size
-        self.buffer = []
-        self.last_ack_pkt = 0
         self.mss = mss
         self.output_file = output_file
-        self.probabilistic_failure = p
+        self.loss_prob = p
+        self.expected_seq = 0
 
-    def rdt_send(self, client_socket, addr):
-        '''Send an ACK packet to the client.'''
-        ack_packet = Packet(seq_num=self.last_ack_pkt, payload=b'')
-        client_socket.sendto(ack_packet.pack(), addr)
+    def rdt_send_ack(self, server_socket, addr):
+        '''Send cumulative ACK for next expected byte.'''
+        ack_packet = Packet.ack(self.expected_seq)
+        server_socket.sendto(ack_packet.pack(), addr)
         print(f"Sent ACK for seq num: {ack_packet.seq_num}")
-   
-    def handle_buffer(self, packet: Packet):
-        '''Handle incoming packet and buffer it if in order.'''
-        if (packet.seq_num == self.last_ack_pkt and
-                len(self.buffer) < self.rcwnd * self.mss):
-            self.buffer.extend(packet.payload)
-            self.last_ack_pkt = packet.seq_num + len(packet.payload)
-            print(f"Buffered packet with seq num: {packet.seq_num}")
-            if len(self.buffer) >= self.mss:
-                self.flush_buffer()
-        else:
-            print(
-                f"Out of order packet received with seq num: {packet.seq_num}."
-                f" Expected: {self.last_ack_pkt}"
-            )
 
-    def flush_buffer(self):
-        '''Flush the buffer to process the data.'''
-        data = bytes(self.buffer)
-        with open(self.output_file, 'ab') as f:
-            f.write(data)
-        self.buffer = []
-        print(f"Flushed {len(data)} bytes to {self.output_file}")
-
-    def rdt_receive(self, client_socket):
+    def rdt_receive(self, server_socket):
         '''Receive a packet from the client socket.'''
-        packet_data, addr = client_socket.recvfrom(16+self.mss)
-        r = random.random()
+        packet_data, addr = server_socket.recvfrom(8 + self.mss)
+        # probabilistic drop
+        if random.random() <= self.loss_prob:
+            # still parse to log correct seq
+            tmp = Packet(payload=b'')
+            tmp.unpack(packet_data)
+            print(f'Packet loss, sequence number = {tmp.seq_num}')
+            return
+
         packet = Packet(payload=b'')
         packet.unpack(packet_data)
 
-        # Check if no payload is there
-        # Implies it is the last packet
-        if len(packet.payload) <= 0:
-            print("File transmission complete")
-            raise KeyboardInterrupt
-        
-        # Introducing random drops
-        if r <= self.probabilistic_failure:
-            print(f'Packet loss, sequence number = {packet.seq_num}')
+        # Only accept data packets
+        if packet.type_field != DATA_TYPE:
             return
-        
-        # Check for checksum 
+
+        # checksum and in-order check
         if not packet.verify_checksum():
             print(f"Corrupted packet received with seq num: {packet.seq_num}")
-            return None
-        print(f"Received packet with seq num: {packet.seq_num}")
-        self.handle_buffer(packet)
-        # Send an ACK back to the client
-        # In case of loss, three duplicate ACKs should trigger a fast retransmit in TCP case
-        self.rdt_send(client_socket, addr)
-        return packet
+            return
+
+        # zero-length payload treated as completion signal
+        if len(packet.payload) == 0:
+            print("File transmission complete signal received.")
+            raise KeyboardInterrupt
+
+        if packet.seq_num == self.expected_seq:
+            with open(self.output_file, 'ab') as f:
+                f.write(packet.payload)
+            self.expected_seq += len(packet.payload)
+            print(f"Received in-order packet with seq num: {packet.seq_num}")
+            self.rdt_send_ack(server_socket, addr)
+        else:
+            print(
+                f"Out-of-order packet with seq num: {packet.seq_num}. "
+                f"Expected: {self.expected_seq}"
+            )
 
     def start(self):
         '''Start the server to listen for incoming packets.'''
@@ -88,17 +71,19 @@ class Server:
                 self.rdt_receive(server_socket)
 
     def stop(self):
-        '''Stop the server and flush any remaining data.'''
-        self.flush_buffer()
+        '''Stop the server.'''
         print("Server stopped.")
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 7735
     output_file = sys.argv[2] if len(sys.argv) > 2 else 'output.txt'
-    probability_value = float(sys.argv[3]) if len(sys.argv) > 3 else 0
-    print(f"Server Port: {port}\nOutput file: {output_file}\nProbability Value: {probability_value}\n")
-    server = Server(address='localhost', port=port, mss=1, window_size=4,
+    probability_value = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
+    print(
+        f"Server Port: {port}\nOutput file: {output_file}\n"
+        f"Probability Value: {probability_value}\n"
+    )
+    server = Server(address='0.0.0.0', port=port, mss=500,
                     output_file=output_file, p=probability_value)
     try:
         server.start()

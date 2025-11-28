@@ -19,3 +19,10 @@ Next, run the `client.py` as following. The client runs in localhost and binds t
 ```
 python3 client.py localhost 7735 testfile.txt 4 500
 ```
+
+## Task 1 experiment helper
+
+Run the Task 1 sweep locally (varies window size N, fixed MSS=500, loss p=0.05, 5 trials each; generates a 1MB file if missing) and write results to CSV:
+```
+python experiments/task1_window.py --file go_back_n/testfile.txt --output task1_results.csv
+```

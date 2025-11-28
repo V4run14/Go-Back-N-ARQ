@@ -1,28 +1,24 @@
 """
 Task 1 experiment script: measure effect of window size N on transfer delay.
 
-Runs the in-repo Go-Back-N client and server locally, varying N, with MSS and
-loss probability fixed to the project spec for Task 1. Produces a CSV of trial
-times and prints averages.
-
-Example:
-    python experiments/task1_window.py --file ../go_back_n/testfile.txt
+Runs the in-repo Go-Back-N client and server locally (same host), varying N,
+with MSS and loss probability fixed to the project spec for Task 1. Produces
+CSV of trial times and prints averages.
 """
 import argparse
 import csv
 import os
 import random
 import socket
+import sys
 import threading
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-GBN_PATH = ROOT / "go_back_n"
-if str(GBN_PATH) not in sys.path:
-    sys.path.insert(0, str(GBN_PATH))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from client import Client  # noqa: E402
 from server import Server  # noqa: E402
@@ -66,7 +62,7 @@ def run_trial(input_file: Path, window_size: int, mss: int, loss_prob: float) ->
     server_thread = threading.Thread(target=run_server, args=(server,),
                                      daemon=True)
     server_thread.start()
-    time.sleep(0.05)  # small delay to ensure bind
+    time.sleep(0.05)
 
     client = Client(address="0.0.0.0", port=0, server_name="127.0.0.1",
                     server_port_num=port, mss=mss, window_size=window_size)

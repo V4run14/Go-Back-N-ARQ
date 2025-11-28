@@ -24,5 +24,12 @@ python3 client.py localhost 7735 testfile.txt 4 500
 
 Run the Task 1 sweep locally (varies window size N, fixed MSS=500, loss p=0.05, 5 trials each; generates a 1MB file if missing) and write results to CSV:
 ```
-python experiments/task1_window.py --file go_back_n/testfile.txt --output task1_results.csv
+cd go_back_n
+python experiments/task1_window.py --file data_1mb.bin --output task1_results.csv
+```
+
+For a remote server (you start `server.py` on the remote host), run the client sweep locally and write results to CSV:
+```
+cd go_back_n
+python experiments/task1_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output task1_remote.csv
 ```

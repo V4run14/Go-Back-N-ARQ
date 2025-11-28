@@ -15,6 +15,7 @@ class Server:
         self.output_file = output_file
         self.loss_prob = p
         self.expected_seq = 0
+        self.last_client_addr = None
 
     def rdt_send_ack(self, server_socket, addr):
         '''Send cumulative ACK for next expected byte.'''
@@ -25,12 +26,15 @@ class Server:
     def rdt_receive(self, server_socket):
         '''Receive a packet from the client socket.'''
         packet_data, addr = server_socket.recvfrom(8 + self.mss)
+        self.last_client_addr = addr
         # probabilistic drop
         if random.random() <= self.loss_prob:
             # still parse to log correct seq
             tmp = Packet(payload=b'')
             tmp.unpack(packet_data)
             print(f'Packet loss, sequence number = {tmp.seq_num}')
+            # send cumulative ACK for last in-order
+            self.rdt_send_ack(server_socket, addr)
             return
 
         packet = Packet(payload=b'')
@@ -43,11 +47,13 @@ class Server:
         # checksum and in-order check
         if not packet.verify_checksum():
             print(f"Corrupted packet received with seq num: {packet.seq_num}")
+            self.rdt_send_ack(server_socket, addr)
             return
 
         # zero-length payload treated as completion signal
         if len(packet.payload) == 0:
             print("File transmission complete signal received.")
+            self.rdt_send_ack(server_socket, addr)
             raise KeyboardInterrupt
 
         if packet.seq_num == self.expected_seq:
@@ -61,6 +67,8 @@ class Server:
                 f"Out-of-order packet with seq num: {packet.seq_num}. "
                 f"Expected: {self.expected_seq}"
             )
+            # send cumulative ACK for last in-order packet
+            self.rdt_send_ack(server_socket, addr)
 
     def start(self):
         '''Start the server to listen for incoming packets.'''

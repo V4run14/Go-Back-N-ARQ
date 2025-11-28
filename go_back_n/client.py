@@ -24,6 +24,8 @@ class Client:
         self.timer = None
         self.timer_lock = threading.Lock()
         self.stop_event = threading.Event()
+        self.timeouts = 0
+        self.max_timeouts = 10  # fail-fast guard to avoid infinite loops
 
     def _start_timer(self, client_socket):
         with self.timer_lock:
@@ -64,6 +66,7 @@ class Client:
             ack_num = packet.seq_num
             if ack_num > self.base:
                 self.base = ack_num
+                self.timeouts = 0
                 print(f"Received ACK for seq num: {ack_num}")
                 if self.base == self.next_seq:
                     self._stop_timer()
@@ -77,6 +80,12 @@ class Client:
     def handle_timeout(self, client_socket):
         '''Handle timeout by retransmitting all unacked packets.'''
         print(f"Timeout, sequence number = {self.base}")
+        self.timeouts += 1
+        if self.timeouts >= self.max_timeouts:
+            print("Maximum timeouts exceeded, aborting transfer.")
+            self.stop_event.set()
+            self._stop_timer()
+            return
         with self.timer_lock:
             self.timer = None
         seq = self.base

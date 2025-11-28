@@ -50,11 +50,13 @@ class Server:
             self.rdt_send_ack(server_socket, addr)
             return
 
-        # zero-length payload treated as completion signal
+        # zero-length payload treated as completion signal; stay alive for next transfer
         if len(packet.payload) == 0:
-            print("File transmission complete signal received.")
+            print("File transmission complete signal received. Resetting state for next transfer.")
             self.rdt_send_ack(server_socket, addr)
-            raise KeyboardInterrupt
+            # Prepare for a new transfer starting at seq 0
+            self.expected_seq = 0
+            return
 
         if packet.seq_num == self.expected_seq:
             with open(self.output_file, 'ab') as f:

@@ -58,7 +58,13 @@ class Client:
     def rdt_receive(self, client_socket):
         '''Receive ACKs and advance the window.'''
         while not self.stop_event.is_set():
-            packet_data, _ = client_socket.recvfrom(1024)
+            try:
+                packet_data, _ = client_socket.recvfrom(1024)
+            except socket.timeout:
+                continue
+            except OSError:
+                # socket likely closed; exit loop
+                break
             packet = Packet(payload=b'')
             packet.unpack(packet_data)
             if packet.type_field != ACK_TYPE or not packet.verify_checksum():
@@ -108,11 +114,11 @@ class Client:
         print(f'Buffer size: {len(self.buffer)} bytes')
 
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
+            client_socket.settimeout(0.5)
             client_socket.bind((self.address, self.port))
             receive_thread = threading.Thread(
                 target=self.rdt_receive,
                 args=(client_socket,),
-                daemon=True,
             )
             receive_thread.start()
 
@@ -121,11 +127,14 @@ class Client:
                 time.sleep(0.01)
 
             # signal completion to server
-            final_packet = Packet(seq_num=self.base, payload=b'',
-                                  type_field=DATA_TYPE)
-            client_socket.sendto(final_packet.pack(),
-                                 (self.server_hostname, self.server_port))
+            if not self.timeouts >= self.max_timeouts:
+                final_packet = Packet(seq_num=self.base, payload=b'',
+                                      type_field=DATA_TYPE)
+                client_socket.sendto(final_packet.pack(),
+                                     (self.server_hostname, self.server_port))
             self._stop_timer()
+
+            receive_thread.join(timeout=1.0)
 
         print("File transmission completed.")
 

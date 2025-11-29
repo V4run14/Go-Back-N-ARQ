@@ -20,7 +20,7 @@ class Client:
         self.base = 0  # earliest unacked byte
         self.next_seq = 0  # next byte to send
         self.mss = mss
-        self.rto = 1.0
+        self.rto = 0.25
         self.timer = None
         self.timer_lock = threading.Lock()
         self.stop_event = threading.Event()

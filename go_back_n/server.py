@@ -16,6 +16,7 @@ class Server:
         self.loss_prob = p
         self.expected_seq = 0
         self.last_client_addr = None
+        self.transfer_started = False
 
     def rdt_send_ack(self, server_socket, addr):
         '''Send cumulative ACK for next expected byte.'''
@@ -44,6 +45,16 @@ class Server:
         if packet.type_field != DATA_TYPE:
             return
 
+        # Detect start of a new transfer
+        if packet.seq_num == 0 and self.expected_seq != 0:
+            print("New transfer detected; resetting expected_seq and output file.")
+            self.expected_seq = 0
+            self.transfer_started = False
+        if packet.seq_num == 0 and not self.transfer_started:
+            # truncate output file at the start of a new transfer
+            open(self.output_file, 'wb').close()
+            self.transfer_started = True
+
         # checksum and in-order check
         if not packet.verify_checksum():
             print(f"Corrupted packet received with seq num: {packet.seq_num}")
@@ -56,6 +67,7 @@ class Server:
             self.rdt_send_ack(server_socket, addr)
             # Prepare for a new transfer starting at seq 0
             self.expected_seq = 0
+            self.transfer_started = False
             return
 
         if packet.seq_num == self.expected_seq:

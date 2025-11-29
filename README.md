@@ -33,3 +33,9 @@ For a remote server (you start `server.py` on the remote host), run the client s
 cd go_back_n
 python experiments/task1_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output task1_remote.csv
 ```
+
+Task 2 MSS sweep (server running remotely, fixed window N=64, MSS 100..1000 by 100):
+```
+cd go_back_n
+python experiments/task2_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output task2_remote.csv
+```

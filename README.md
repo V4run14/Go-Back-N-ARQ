@@ -55,3 +55,9 @@ Plot Task 3 averages (delay vs loss probability):
 ```
 python experiments/plot_task3.py --input task3_remote.csv --output task3_plot.png
 ```
+
+Task 3 cycling server (automatically steps p from 0.01 to 0.10 each completed transfer):
+```
+cd go_back_n
+python server_task3.py 7735 output.txt --pmin 0.01 --pmax 0.10 --pstep 0.01 --per-p 5
+```

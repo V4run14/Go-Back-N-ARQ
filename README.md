@@ -39,3 +39,19 @@ Task 2 MSS sweep (server running remotely, fixed window N=64, MSS 100..1000 by 1
 cd go_back_n
 python experiments/task2_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output task2_remote.csv
 ```
+
+Task 2 plotting (average delay vs MSS from the CSV):
+```
+cd go_back_n
+python experiments/plot_task2.py --input task2_remote.csv --output task2_plot.png
+```
+
+Task 3 loss sweep (server running remotely, fixed window N=64, MSS=500, p=0.01..0.10):
+```
+cd go_back_n
+python experiments/task3_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output task3_remote.csv
+```
+Plot Task 3 averages (delay vs loss probability):
+```
+python experiments/plot_task3.py --input task3_remote.csv --output task3_plot.png
+```

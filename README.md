@@ -61,3 +61,71 @@ Task 3 cycling server (automatically steps p from 0.01 to 0.10 each completed tr
 cd go_back_n
 python server_task3.py 7735 output.txt --pmin 0.01 --pmax 0.10 --pstep 0.01 --per-p 5
 ```
+
+Selective Repeat
+----------------
+Run SR server:
+```
+python sr_server.py 7735 output.txt 0.05 1024
+```
+Run SR client:
+```
+python sr_client.py <server_ip> 7735 data_1mb.bin 64 500
+```
+
+SR Task 1 (window sweep):
+```
+python experiments/sr_task1_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output sr_task1_remote.csv
+```
+
+SR Task 2 (MSS sweep, N=64):
+```
+python experiments/sr_task2_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output sr_task2_remote.csv
+```
+
+SR Task 3 (loss sweep, N=64, MSS=500; align server p or use cycling SR server below):
+```
+python experiments/sr_task3_remote.py --host <server_ip> --port 7735 --file data_1mb.bin --output sr_task3_remote.csv
+```
+Cycling SR server for Task 3 (advances p after 5 transfers):
+```
+python sr_server_task3.py 7735 output.txt --pmin 0.01 --pmax 0.10 --pstep 0.01 --per-p 5 --window 64
+```
+
+Selective Repeat (separate folder)
+----------------------------------
+Files are under `selective_repeat/` and reuse the Go-Back-N packet format via imports from `go_back_n`.
+
+Run SR server:
+```
+cd selective_repeat
+python sr_server.py 7735 output.txt 0.05 1024
+```
+Run SR client:
+```
+cd selective_repeat
+python sr_client.py <server_ip> 7735 ../go_back_n/data_1mb.bin 64 500
+```
+
+SR Task 1 (window sweep):
+```
+cd selective_repeat
+python experiments/sr_task1_remote.py --host <server_ip> --port 7735 --file ../go_back_n/data_1mb.bin --output sr_task1_remote.csv
+```
+
+SR Task 2 (MSS sweep, N=64):
+```
+cd selective_repeat
+python experiments/sr_task2_remote.py --host <server_ip> --port 7735 --file ../go_back_n/data_1mb.bin --output sr_task2_remote.csv
+```
+
+SR Task 3 (loss sweep, N=64, MSS=500; align server p or use cycling SR server below):
+```
+cd selective_repeat
+python experiments/sr_task3_remote.py --host <server_ip> --port 7735 --file ../go_back_n/data_1mb.bin --output sr_task3_remote.csv
+```
+Cycling SR server for Task 3 (advances p after 5 transfers):
+```
+cd selective_repeat
+python sr_server_task3.py 7735 output.txt --pmin 0.01 --pmax 0.10 --pstep 0.01 --per-p 5 --window 64
+```
